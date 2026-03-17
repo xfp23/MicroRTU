@@ -1,4 +1,4 @@
-# Modbus-RTU — Quick User Guide
+# MicroRTU — Quick User Guide
 
 [中文](./readme.zh.md)
 

@@ -1,5 +1,5 @@
 
-# Modbus-RTU 快速使用指南
+# MicroRTU 快速使用指南
 
 [English](./readme.md)
 
