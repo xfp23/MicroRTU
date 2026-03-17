@@ -188,7 +188,7 @@ RTU_Sta_t RTUSlave_RegisterHoldReg(RTU_RegisterMap_t *Map, size_t regNum)
     return RTU_OK;
 }
 
-RTU_Sta_t RTUSlave_RegisterWriteReg(RTU_RegisterMap_t *Map, size_t regNum)
+RTU_Sta_t RTUSlave_RegisterInputReg(RTU_RegisterMap_t *Map, size_t regNum)
 {
     if (Map == NULL || regNum == 0 || regNum > RTU_MAX_INPUT_REGS)
         return RTU_ERR;

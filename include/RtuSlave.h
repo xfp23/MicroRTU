@@ -53,9 +53,9 @@ extern RTU_Sta_t RTUSlave_RegisterCoils(RTU_RegisterMap_t *Map, size_t regNum);
 extern RTU_Sta_t RTUSlave_RegisterHoldReg(RTU_RegisterMap_t *Map, size_t regNum);
 
 /**
- * @brief Register writable registers (functions 0x06 / 0x10).
+ * @brief Register writable registers (functions 0x04).
  */
-extern RTU_Sta_t RTUSlave_RegisterWriteReg(RTU_RegisterMap_t *Map, size_t regNum);
+extern RTU_Sta_t RTUSlave_RegisterInputReg(RTU_RegisterMap_t *Map, size_t regNum);
 
 /**
  * @brief Called by lower layers when bytes arrive.

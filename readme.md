@@ -1,197 +1,333 @@
-# Modbus RTU Slave Library
+# Modbus-RTU — Quick User Guide
 
-A lightweight Modbus RTU slave implementation library for embedded systems.
+[中文](./readme.zh.md)
 
-[中文版](readme.zh.md) | English
+Lightweight Modbus RTU slave (single-instance). This document tells you **how to use the API** (what you call, what to pass, how to arrange your register tables). It is *not* an implementation walkthrough — you do not need to read the library internals to use it.
 
-## Features
+---
 
-- **Modbus RTU Protocol**: Full slave implementation
-- **Supported Function Codes**:
-  - `0x01` - Read Coils
-  - `0x03` - Read Holding Registers  
-  - `0x06` - Write Single Register
-  - `0x16` - Mask Write Register
-- **Automatic CRC validation**
-- **Flexible register mapping**
-- **Memory safe**
+## 1 — Quick overview (how it works)
 
-## Quick Start
+1. Call `RTUSlave_Init()` once at startup.
+2. Register your device registers (coils, holding regs, input regs) with the provided `RTUSlave_Register*` APIs. Each registration creates internal nodes that point to your data pointers.
+3. Provide transport by overriding the weak `RTU_Transmit()` with your UART/serial send function.
+4. When bytes arrive from the master, call `RTUSlave_ReceiveCallback(data, len)` — this **only copies the latest frame** into the internal buffer (no parsing).
+5. Periodically call `RTUSlave_TimerHandler()` (from a main loop or a timer task). It parses the frame and calls `RTU_Transmit()` with the response.
+6. When done, call `RTUSlave_Deinit()` to free registered nodes.
 
-### 1. Include the library
+---
+
+## 2 — Public API (what you call)
 
 ```c
-#include "RtuSlave.h"
+// init / deinit
+RTU_Sta_t RTUSlave_Init(void);
+void      RTUSlave_Deinit(void);
+
+// register maps
+RTU_Sta_t RTUSlave_RegisterCoils(RTU_RegisterMap_t *Map, size_t regNum);
+RTU_Sta_t RTUSlave_RegisterHoldReg(RTU_RegisterMap_t *Map, size_t regNum);
+RTU_Sta_t RTUSlave_RegisterInputReg(RTU_RegisterMap_t *Map, size_t regNum);
+
+// runtime
+void      RTUSlave_ReceiveCallback(uint8_t *data, size_t len);
+RTU_Sta_t RTUSlave_TimerHandler(void);
+
+// utilities
+RTU_Sta_t RTUSlave_Modifyid(uint8_t id);
+
+// override this in your project to actually send bytes:
+int __attribute__((weak)) RTU_Transmit(uint8_t *data, size_t size);
 ```
 
-### 2. Define your data and register mapping
+Return values are `RTU_Sta_t` (e.g. `RTU_OK`, `RTU_ERR`, `RTU_PERMISS_ERR`, `RTU_READ_HOLD_REG`, ...). These are for your code to inspect; the library will call `RTU_Transmit()` to send protocol responses.
+
+---
+
+## 3 — Register map types & map structure
+
+Use the unified map item `RTU_RegisterMap_t`:
 
 ```c
-// Your data storage
-uint8_t coil_data[10] = {0};
-uint16_t holding_reg_data[5] = {100, 200, 300, 400, 500};
-uint16_t write_reg_data[3] = {0};
-
-// Register mapping
-RTU_RegisterMap_t coil_map[] = {
-    {0x0000, &coil_data[0]},
-    {0x0001, &coil_data[1]},
-    // ... more coils
-};
-
-RTU_RegisterMap_t holding_map[] = {
-    {0x0000, &holding_reg_data[0]},
-    {0x0001, &holding_reg_data[1]},
-    // ... more registers
-};
-```
-
-### 3. Implement transmit function
-
-```c
-int transmit_data(uint8_t *data, size_t size)
+typedef struct
 {
-    // Send data via UART, SPI, etc.
-    // Return 0 on success, -1 on error
-    return uart_send(data, size);
+    uint16_t addr;            // Modbus register/coil address (16-bit)
+    RTU_Permiss_t permiss;    // RTU_PERMISS_OR (read only) or RTU_PERMISS_RW (read/write)
+    void *data;               // pointer to variable holding the value (uint8_t for coils, uint16_t for registers)
+} RTU_RegisterMap_t;
+```
+
+`RTU_Register_t` nodes created by the library contain:
+
+```c
+typedef struct RTU_Register
+{
+    uint16_t address;
+    uint8_t permiss;   // RTU_PERMISS_OR / RTU_PERMISS_RW
+    void *value;       // pointer to user data
+    struct RTU_Register *next;
+} RTU_Register_t;
+```
+
+### Data types
+
+* **Coils**: user `data` should point to a `uint8_t` (0 or 1).
+* **Holding / Input registers**: user `data` should point to a `uint16_t`.
+
+---
+
+## 4 — How to create & register a map (examples)
+
+Example variables and maps:
+
+```c
+// application variables
+uint8_t coil_start = 0;
+uint8_t coil_stop  = 0;
+uint16_t holding_param = 1234;
+uint16_t input_temp   = 250; // e.g. 25.0 °C scaled
+
+// map array (one array for each type)
+RTU_RegisterMap_t coils_map[] = {
+    { .addr = 0x0001, .permiss = RTU_PERMISS_RW, .data = &coil_start },
+    { .addr = 0x0002, .permiss = RTU_PERMISS_RW, .data = &coil_stop  },
+};
+
+RTU_RegisterMap_t hold_map[] = {
+    { .addr = 0x4000, .permiss = RTU_PERMISS_RW, .data = &holding_param },
+};
+
+RTU_RegisterMap_t input_map[] = {
+    { .addr = 0x3000, .permiss = RTU_PERMISS_OR, .data = &input_temp }, // No matter what permissions you set, it is read-only.
+};
+```
+
+Register them after `RTUSlave_Init()`:
+
+```c
+RTUSlave_Init();
+RTUSlave_RegisterCoils(coils_map, sizeof(coils_map)/sizeof(coils_map[0]));
+RTUSlave_RegisterHoldReg(hold_map,  sizeof(hold_map)/sizeof(hold_map[0]));
+
+RTUSlave_RegisterInputReg(input_map, sizeof(input_map)/sizeof(input_map[0]));
+```
+
+> **Important:** The library expects your registered nodes for multi-read/write to be **in ascending address order and contiguous** when you want block read/write behavior (the implementation assumes `node->next` is the next address). If you register sparse/unsorted maps, multi-register/coil operations (`0x03`, `0x10`, `0x01`, `0x0F`) may fail.
+
+---
+
+## 5 — Overriding transport: implement `RTU_Transmit`
+
+The library declares a **weak** `RTU_Transmit()` — override it in your project:
+
+```c
+int RTU_Transmit(uint8_t *data, size_t size)
+{
+    // send data over UART/RS485 driver; blocking or buffered is fine
+    uart_write(data, size);
+    return 0; // user-defined return value
 }
 ```
 
-### 4. Initialize and use
+---
+
+## 6 — Receiving frames & dispatching
+
+When bytes arrive from the serial driver, call:
 
 ```c
-int main()
+RTUSlave_ReceiveCallback(rx_buf, rx_len);
+```
+
+This **copies** bytes into the internal single-frame buffer and sets a ready flag. The library does **not** parse in the callback. Then, periodically (main loop or timer task), call:
+
+```c
+RTUSlave_TimerHandler();
+```
+
+`RTUSlave_TimerHandler()` will:
+
+* Validate frame size and CRC (Modbus CRC16 — CRC placed low byte then high byte at the end of the frame).
+* Parse function code and addresses/quantities.
+* Read/write the registered nodes, respecting `permiss`.
+* Build the Modbus response and call `RTU_Transmit()`.
+
+**Concurrency note:** `RTUSlave_ReceiveCallback()` may be called from an ISR. If so, ensure `RTUSlave_TimerHandler()` is called in a safe context; you may want to disable interrupts briefly around `RTUSlave_ReceiveCallback()` or use a minimal critical section depending on your platform.
+
+---
+
+## 7 — Function codes and frame formats (request & response)
+
+> CRC bytes are **low byte then high byte** (little-endian) and are the final two bytes in a frame.
+
+### 0x03 — Read Holding Registers (request)
+
+```
+Request:
+[ id ][ 0x03 ][ addr_hi ][ addr_lo ][ qty_hi ][ qty_lo ][ CRC_lo ][ CRC_hi ]
+
+Response:
+[ id ][ 0x03 ][ byte_count ][ data_hi ][ data_lo ] ... [ CRC_lo ][ CRC_hi ]
+byte_count = qty * 2
+```
+
+### 0x04 — Read Input Registers (request)
+
+```
+Request:
+[ id ][ 0x04 ][ addr_hi ][ addr_lo ][ qty_hi ][ qty_lo ][ CRC_lo ][ CRC_hi ]
+
+Response:
+[ id ][ 0x04 ][ byte_count ][ data_hi ][ data_lo ] ... [ CRC_lo ][ CRC_hi ]
+```
+
+### 0x06 — Write Single Holding Register (request)
+
+```
+Request:
+[ id ][ 0x06 ][ addr_hi ][ addr_lo ][ value_hi ][ value_lo ][ CRC_lo ][ CRC_hi ]
+
+Response (echo):
+[ id ][ 0x06 ][ addr_hi ][ addr_lo ][ value_hi ][ value_lo ][ CRC_lo ][ CRC_hi ]
+```
+
+### 0x10 — Write Multiple Holding Registers (request)
+
+```
+Request:
+[ id ][ 0x10 ][ addr_hi ][ addr_lo ][ qty_hi ][ qty_lo ][ byte_count ][ data... ][ CRC_lo ][ CRC_hi ]
+byte_count = qty * 2
+
+Response:
+[ id ][ 0x10 ][ addr_hi ][ addr_lo ][ qty_hi ][ qty_lo ][ CRC_lo ][ CRC_hi ]
+```
+
+### 0x01 — Read Coils (request)
+
+```
+Request:
+[ id ][ 0x01 ][ addr_hi ][ addr_lo ][ qty_hi ][ qty_lo ][ CRC_lo ][ CRC_hi ]
+
+Response:
+[ id ][ 0x01 ][ byte_count ][ coil_bytes... ][ CRC_lo ][ CRC_hi ]
+byte_count = (qty + 7) / 8
+coils packed LSB first within each data byte
+```
+
+### 0x05 — Write Single Coil
+
+```
+Request:
+[ id ][ 0x05 ][ addr_hi ][ addr_lo ][ value_hi ][ value_lo ][ CRC_lo ][ CRC_hi ]
+value: 0xFF00 = ON, 0x0000 = OFF
+
+Response (echo request)
+```
+
+### 0x0F — Write Multiple Coils
+
+```
+Request:
+[ id ][ 0x0F ][ addr_hi ][ addr_lo ][ qty_hi ][ qty_lo ][ byte_count ][ data... ][ CRC_lo ][ CRC_hi ]
+byte_count = (qty + 7) / 8
+
+Response:
+[ id ][ 0x0F ][ addr_hi ][ addr_lo ][ qty_hi ][ qty_lo ][ CRC_lo ][ CRC_hi ]
+```
+
+---
+
+## 8 — Permissions & write semantics
+
+* `RTU_PERMISS_OR` — **read-only** (writes will be rejected with `RTU_PERMISS_ERR` in the library).
+* `RTU_PERMISS_RW` — **read/write**.
+
+**Multi-write semantics:** The library checks **all** target addresses for permissions and address continuity first. If any entry is invalid or read-only, the whole operation fails (no partial writes). This follows Modbus all-or-nothing behavior.
+
+---
+
+## 9 — Configurable macros (from `RTUSlave_config.h`)
+
+* `RTU_DEFAULT_BUF_SIZE` — frame buffer (default 256).
+* `RTU_MAX_COILS` — max coils allowed by registration (default 128).
+* `RTU_MAX_HOLD_REGS` — max holding regs (default 128).
+* `RTU_MAX_INPUT_REGS` — max input regs (default 128).
+
+The register registration functions check `regNum` against these macros and return `RTU_ERR` if the provided count exceeds the macro.
+
+---
+
+## 10 — Example usage (minimal)
+
+```c
+// --- application globals ---
+uint8_t coil_a = 0;
+uint16_t hold_p = 100;
+uint16_t input_temp = 300;
+
+// --- register maps ---
+RTU_RegisterMap_t coils[] = {
+    { .addr = 0x0001, .permiss = RTU_PERMISS_RW, .data = &coil_a }
+};
+RTU_RegisterMap_t holds[] = {
+    { .addr = 0x4000, .permiss = RTU_PERMISS_RW, .data = &hold_p }
+};
+RTU_RegisterMap_t inputs[] = {
+    { .addr = 0x3000, .permiss = RTU_PERMISS_OR, .data = &input_temp }
+};
+
+// --- user overrides transmit ---
+int RTU_Transmit(uint8_t *data, size_t size)
 {
-    RTUSlave_handle_t slave_handle = NULL;
-    
-    // Configuration
-    RtuSlave_Conf_t config = {
-        .id = 0x01,                    // Device ID
-        .buf_size = 256,               // Buffer size
-        .transmit = transmit_data,     // Transmit function
-        .coils = {.map = coil_map, .count = 10},
-        .holdingRegs = {.map = holding_map, .count = 5},
-        .writeRegs = {.map = write_map, .count = 3}
-    };
-    
-    // Initialize
-    if(RTUSlave_Init(&slave_handle, &config) != RTU_OK) {
-        return -1;
-    }
-    
-    // Process received frames
-    RTU_Sta_t result = RTUSlave_TimerHandler(slave_handle, frame, size);
-    
-    // Cleanup
-    RTU_Deinit(&slave_handle);
+    uart_send(data, size);
     return 0;
 }
-```
 
-## API Reference
+int main(void)
+{
+    RTUSlave_Init();
+    RTUSlave_RegisterCoils(coils, 1);
+    RTUSlave_RegisterHoldReg(holds, 1);
+    RTUSlave_RegisterInputReg(inputs, 1); // or proper input registration API
 
-### Functions
+    // main loop
+    for (;;)
+    {
+        // when UART receives a frame:
+        // RTUSlave_ReceiveCallback(rx_buf, rx_len);
 
-| Function | Description |
-|----------|-------------|
-| `RTUSlave_Init()` | Initialize slave instance |
-| `RTUSlave_TimerHandler()` | Process received Modbus frames |
-| `RTUSlave_Modifyid()` | Modify device ID dynamically |
-| `RTU_Deinit()` | Cleanup resources |
+        // periodically:
+        RTUSlave_TimerHandler();
 
-### Return Values
+        // app tasks...
+    }
 
-`RTUSlave_TimerHandler()` returns the following status codes:
-
-| Return Value | Description | Action |
-|--------------|-------------|---------|
-| `RTU_READ_HOLD_REG` | Read register operation executed | Data was read from holding registers |
-| `RTU_WRITE_HOLD_REG` | Write register operation executed | Data was written to registers |
-| `RTU_READ_COIL` | Read coil operation executed | Coil states were read |
-| `RTU_ERR` | Processing failed | Check frame format, CRC, or register mapping |
-
-### RTUSlave_Modifyid Function
-
-```c
-RTU_Sta_t RTUSlave_Modifyid(RTUSlave_handle_t handle, uint8_t id);
-```
-
-Dynamically modify the device ID of an initialized slave instance.
-
-**Parameters:**
-- `handle`: Slave handle
-- `id`: New device ID (1-254, 0 and 255 are invalid)
-
-**Returns:**
-- `RTU_OK`: ID modified successfully
-- `RTU_ERR`: Invalid handle or ID
-
-**Example:**
-```c
-// Change device ID from 0x01 to 0x02
-if(RTUSlave_Modifyid(slave_handle, 0x02) == RTU_OK) {
-    printf("Device ID changed to 0x02\n");
+    RTUSlave_Deinit();
 }
 ```
 
-### Usage Example with Return Values
+---
 
-```c
-RTU_Sta_t result = RTUSlave_TimerHandler(slave_handle, frame, size);
+## 11 — Error handling & exceptions
 
-switch(result) {
-    case RTU_READ_HOLD_REG:
-        // Read register operation completed
-        // You can update UI, log data, etc.
-        break;
-    case RTU_WRITE_HOLD_REG:
-        // Write register operation completed
-        // You can save data, trigger events, etc.
-        break;
-    case RTU_READ_COIL:
-        // Read coil operation completed
-        // You can update coil status display, etc.
-        break;
-    case RTU_ERR:
-        // Handle error (invalid frame, CRC error, etc.)
-        break;
-}
-```
+* Library return codes: `RTU_OK`, `RTU_ERR`, `RTU_PERMISS_ERR`, `RTU_READ_HOLD_REG`, etc. Use these if you want to log or decide further actions.
+* **Protocol exceptions** (Modbus exception responses, e.g. function | 0x80 + exception code) are recommended to be returned to master. If you need standard Modbus exception behavior, you should implement it in the code-path where `RTU_PERMISS_ERR` or `RTU_ERR` is returned — i.e. build an exception response and `RTU_Transmit()` it. (If you want, I can add a small helper to build/send standard exception frames.)
 
-### Data Structures
+---
 
-| Type | Description |
-|------|-------------|
-| `RTUSlave_handle_t` | Slave handle type |
-| `RtuSlave_Conf_t` | Configuration structure |
-| `RTU_RegisterMap_t` | Register mapping structure |
+## 12 — Gotchas & recommendations
 
-## Compilation
+* **Map ordering & continuity:** For multi-read/write to work, provide maps in ascending address order and contiguous for the requested ranges. The implementation expects `node->next` to be the next address.
+* **Single-frame buffer:** `RTUSlave_ReceiveCallback()` stores only the latest frame. If your serial driver splits frames, collect bytes into a frame buffer in your driver and call the callback when a full Modbus frame is assembled.
+* **ISR safety:** If `ReceiveCallback()` is called from an ISR, keep it short. `TimerHandler()` should run in normal task context.
+* **Protect critical device state:** Use `RTU_PERMISS_OR` for status registers and those that must never be remotely modified.
+* **Test with a Modbus master tool** (e.g. Modbus Poll, QModMaster) to verify register mapping and responses.
 
-```bash
-gcc -o example example.c src/RtuSlave.c -Iinclude
-```
+---
 
-## Requirements
+If you want, I can:
 
-- C99 compiler
-- Standard C library (stdlib.h, string.h, stdint.h)
+* add a small helper function to **send Modbus exception responses**; or
+* produce a **PATCH/diff** that injects standard exception replies automatically when the handler encounters `RTU_PERMISS_ERR` / illegal address / CRC error.
 
-## Important Notes
-
-1. **Register addresses must be consecutive** - no gaps allowed
-2. **Thread safety** - Not thread-safe, add synchronization if needed
-3. **Buffer size** - Ensure sufficient buffer size for largest Modbus frame
-4. **Transmit function** - Must be implemented by user
-
-## Example
-
-See `example/example.c` for a complete working example.
-
-## License
-
-See LICENSE file for details.
-
-## Version
-
-v0.1 - Initial release with basic Modbus RTU slave functionality
+Which would you prefer next?
