@@ -105,9 +105,9 @@ int main()
 
 | Return Value | Description | Action |
 |--------------|-------------|---------|
-| `RTU_READREG` | Read register operation executed | Data was read from holding registers |
-| `RTU_WRITEREG` | Write register operation executed | Data was written to registers |
-| `RTU_READCIOL` | Read coil operation executed | Coil states were read |
+| `RTU_READ_HOLD_REG` | Read register operation executed | Data was read from holding registers |
+| `RTU_WRITE_HOLD_REG` | Write register operation executed | Data was written to registers |
+| `RTU_READ_COIL` | Read coil operation executed | Coil states were read |
 | `RTU_ERR` | Processing failed | Check frame format, CRC, or register mapping |
 
 ### RTUSlave_Modifyid Function
@@ -140,15 +140,15 @@ if(RTUSlave_Modifyid(slave_handle, 0x02) == RTU_OK) {
 RTU_Sta_t result = RTUSlave_TimerHandler(slave_handle, frame, size);
 
 switch(result) {
-    case RTU_READREG:
+    case RTU_READ_HOLD_REG:
         // Read register operation completed
         // You can update UI, log data, etc.
         break;
-    case RTU_WRITEREG:
+    case RTU_WRITE_HOLD_REG:
         // Write register operation completed
         // You can save data, trigger events, etc.
         break;
-    case RTU_READCIOL:
+    case RTU_READ_COIL:
         // Read coil operation completed
         // You can update coil status display, etc.
         break;

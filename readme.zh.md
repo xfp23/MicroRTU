@@ -105,9 +105,9 @@ int main()
 
 | 返回值 | 描述 | 建议操作 |
 |--------|------|----------|
-| `RTU_READREG` | 执行了读寄存器操作 | 数据已从保持寄存器读取 |
-| `RTU_WRITEREG` | 执行了写寄存器操作 | 数据已写入寄存器 |
-| `RTU_READCIOL` | 执行了读线圈操作 | 线圈状态已读取 |
+| `RTU_READ_HOLD_REG` | 执行了读寄存器操作 | 数据已从保持寄存器读取 |
+| `RTU_WRITE_HOLD_REG` | 执行了写寄存器操作 | 数据已写入寄存器 |
+| `RTU_READ_COIL` | 执行了读线圈操作 | 线圈状态已读取 |
 | `RTU_ERR` | 处理失败 | 检查数据帧格式、CRC或寄存器映射 |
 
 ### RTUSlave_Modifyid 函数
@@ -140,15 +140,15 @@ if(RTUSlave_Modifyid(slave_handle, 0x02) == RTU_OK) {
 RTU_Sta_t result = RTUSlave_TimerHandler(slave_handle, frame, size);
 
 switch(result) {
-    case RTU_READREG:
+    case RTU_READ_HOLD_REG:
         // 读寄存器操作完成
         // 可以更新UI、记录数据等
         break;
-    case RTU_WRITEREG:
+    case RTU_WRITE_HOLD_REG:
         // 写寄存器操作完成
         // 可以保存数据、触发事件等
         break;
-    case RTU_READCIOL:
+    case RTU_READ_COIL:
         // 读线圈操作完成
         // 可以更新线圈状态显示等
         break;
