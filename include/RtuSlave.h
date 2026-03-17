@@ -1,12 +1,11 @@
 /**
  * @file RTUSlave.h
  * @author xfp23
- * @brief 
+ * @brief Modbus RTU Slave Interface (User API)
  * @version 0.1
  * @date 2026-03-17
- * 
+ *
  * @copyright Copyright (c) 2026
- * 
  */
 
 #ifndef RTUSLAVE_H
@@ -18,87 +17,165 @@
 extern "C" {
 #endif
 
+#define RTU_MAP_SIZEOF(x) (sizeof(x) / sizeof((x)[0]))
+
 /**
- * @brief Initialize the singleton RTU slave.
+ * @brief Initialize the Modbus RTU slave instance.
  *
- * Allocates internal object and buffer using calloc. No parameters needed for single-instance.
+ * This function allocates all required internal resources, including
+ * the RTU object and frame buffer. Must be called before using any
+ * other API in this module.
  *
- * @return RTU_OK on success, RTU_ERR on failure.
+ * @note This implementation uses a singleton design (only one instance).
+ *
+ * @return RTU_OK on success
+ * @return RTU_ERR on failure (e.g. memory allocation failed)
  */
 extern RTU_Sta_t RTUSlave_Init(void);
 
 /**
- * @brief Deinitialize the singleton RTU slave.
+ * @brief Deinitialize the Modbus RTU slave instance.
  *
- * Frees all allocated memory including register lists and internal buffer.
+ * Frees all dynamically allocated resources, including:
+ * - Register linked lists
+ * - Internal frame buffer
+ *
+ * After calling this function, the module must be re-initialized
+ * before reuse.
  */
 extern void RTUSlave_Deinit(void);
 
 /**
- * @brief Register coils (function 0x01).
+ * @brief Register coil objects (bit-level, read/write).
  *
- * This copies the provided Map into internal linked-list nodes (uses calloc).
+ * Used for Modbus function codes:
+ * - 0x01 (Read Coils)
+ * - 0x05 (Write Single Coil)
+ * - 0x0F (Write Multiple Coils)
  *
- * @param Map Pointer to array of RTU_RegisterMap_t
- * @param regNum Number of entries in Map
- * @return RTU_OK on success, RTU_ERR on failure.
+ * Each entry in the map corresponds to one coil.
+ *
+ * @param Map Pointer to user-defined register map array
+ * @param regNum Number of elements in the map
+ *
+ * @note
+ * - Internal memory will be reallocated (previous registrations will be cleared)
+ * - Map data is NOT copied; only pointers are stored
+ *
+ * @return RTU_OK on success
+ * @return RTU_ERR on failure
  */
 extern RTU_Sta_t RTUSlave_RegisterCoils(RTU_RegisterMap_t *Map, size_t regNum);
 
 /**
- * @brief Register holding registers (function 0x03).
+ * @brief Register holding registers (16-bit, read/write).
  *
- * Same behavior as RegisterCoils.
+ * Used for Modbus function codes:
+ * - 0x03 (Read Holding Registers)
+ * - 0x06 (Write Single Register)
+ * - 0x10 (Write Multiple Registers)
+ *
+ * @param Map Pointer to register map array
+ * @param regNum Number of registers
+ *
+ * @note
+ * - Each register must point to a valid 16-bit data variable
+ * - Permissions (RO/RW) are respected during write operations
+ *
+ * @return RTU_OK on success
+ * @return RTU_ERR on failure
  */
 extern RTU_Sta_t RTUSlave_RegisterHoldReg(RTU_RegisterMap_t *Map, size_t regNum);
 
 /**
- * @brief Register writable registers (functions 0x04).
+ * @brief Register input registers (16-bit, read-only).
+ *
+ * Used for Modbus function code:
+ * - 0x04 (Read Input Registers)
+ *
+ * @param Map Pointer to register map array
+ * @param regNum Number of registers
+ *
+ * @note
+ * - These registers are strictly read-only
+ * - Any write attempt will be rejected automatically
+ *
+ * @return RTU_OK on success
+ * @return RTU_ERR on failure
  */
 extern RTU_Sta_t RTUSlave_RegisterInputReg(RTU_RegisterMap_t *Map, size_t regNum);
 
 /**
- * @brief Called by lower layers when bytes arrive.
+ * @brief Receive raw Modbus RTU data from lower layer.
  *
- * IMPORTANT: This function must NOT process frames. It only copies bytes into the internal
- * buffer and marks that a frame is present. The actual parsing & response happens in
- * RTUSlave_TimerHandler(), which must be called periodically (e.g. in a timer / main loop).
+ * This function should be called by the UART/RS485 driver when
+ * a complete frame (or data chunk) is received.
  *
- * If multiple calls happen before TimerHandler(), the latest call overwrites the internal buffer.
+ * @warning
+ * - This function DOES NOT parse or process the frame
+ * - It only stores the data internally
  *
- * @param data Pointer to incoming bytes (caller-owned)
- * @param len Length of incoming bytes
+ * Actual frame parsing and response generation is handled in
+ * RTUSlave_TimerHandler().
+ *
+ * @param data Pointer to received bytes
+ * @param len Length of received data
+ *
+ * @note
+ * - If called multiple times before processing, previous data is overwritten
  */
 extern void RTUSlave_ReceiveCallback(uint8_t *data, size_t len);
 
 /**
- * @brief Periodic handler — parse & process any received frame.
+ * @brief Periodic processing handler.
  *
- * Should be called periodically (e.g. from a timer ISR or main loop). If a frame has been
- * received (via RTUSlave_ReceiveCallback), this will validate, handle function codes,
- * prepare responses, and call the weak RTU_Transmit() to send responses.
+ * This function must be called periodically (e.g. in main loop or timer interrupt).
  *
- * @return RTU_Sta_t one of RTU_OK / RTU_ERR / RTU_READ_HOLD_REG / RTU_WRITE_HOLD_REG / RTU_READ_COIL
+ * Responsibilities:
+ * - Detect complete frame
+ * - Validate CRC
+ * - Parse function code
+ * - Access register map
+ * - Generate response frame
+ * - Call RTU_Transmit()
+ *
+ * @return RTU_OK on normal operation
+ * @return RTU_ERR on failure
+ * @return RTU_READ_HOLD_REG when a read holding register request is processed
+ * @return RTU_WRITE_HOLD_REG when a write holding register request is processed
+ * @return RTU_READ_COIL when a coil read is processed
  */
 extern RTU_Sta_t RTUSlave_TimerHandler(void);
 
 /**
- * @brief Modify the slave ID.
+ * @brief Set Modbus slave ID.
  *
- * @param id New id (must be 1..254)
- * @return RTU_OK on success, RTU_ERR on invalid id or not initialized.
+ * @param id Slave address (valid range: 1 ~ 254)
+ *
+ * @return RTU_OK on success
+ * @return RTU_ERR if ID is invalid or module not initialized
  */
 extern RTU_Sta_t RTUSlave_Modifyid(uint8_t id);
 
 /**
- * @brief Weak transmit function (user may override in their project).
+ * @brief Transmit Modbus RTU response (weak function).
  *
- * Default implementation does nothing; user should provide a strong symbol with same
- * signature to actually send bytes out.
+ * This function is declared as weak and should be overridden by the user
+ * to connect with the actual hardware transmission (UART/RS485).
  *
- * @param data pointer to bytes to send
- * @param size number of bytes to send
- * @return implementation-defined (0 for success by default)
+ * Example:
+ * @code
+ * int RTU_Transmit(uint8_t *data, size_t size)
+ * {
+ *     UART_Send(data, size);
+ *     return 0;
+ * }
+ * @endcode
+ *
+ * @param data Pointer to transmit buffer
+ * @param size Number of bytes to send
+ *
+ * @return Implementation-defined (typically 0 for success)
  */
 extern int __attribute__((weak)) RTU_Transmit(uint8_t *data, size_t size);
 

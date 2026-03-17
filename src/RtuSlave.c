@@ -121,7 +121,7 @@ static void rtu_send_exception(uint8_t func, RTU_ExceptionCode_t ex_code)
     resp[4] = (uint8_t)(crc >> 8);
 
     // 异常帧长度固定为 5 字节
-    RTUSlave_Transmit(resp, 5);
+    RTU_Transmit(resp, 5);
 }
 
 /* Initialize singleton */
