@@ -27,7 +27,7 @@ typedef enum
 {
     RTU_PERMISS_OR, // only read
     RTU_PERMISS_RW, // read and write
-} RTU_Permiss_t;
+} __attribute__((packed)) RTU_Permiss_t;
 
 typedef enum
 {
