@@ -89,6 +89,7 @@ static int rtubuild_register_list(RTU_Register_t **headp, RTU_RegisterMap_t *map
         node->value = map[i].data;
         node->permiss = (uint8_t)map[i].permiss;
         node->next = NULL;
+        node->callback = map[i].callback;
 
         if (prev)
             prev->next = node;
@@ -324,6 +325,11 @@ RTU_Sta_t RTUSlave_TimerHandler(void)
             if (node->value)
             {
                 bit = ((*((uint8_t *)node->value)) != 0) ? 1u : 0u;
+
+                if (node->callback != NULL)
+                {
+                    node->callback();
+                }
             }
             else
             {
@@ -389,6 +395,11 @@ RTU_Sta_t RTUSlave_TimerHandler(void)
             if (node->value)
             {
                 val = *((uint16_t *)node->value);
+
+                if (node->callback != NULL)
+                {
+                    node->callback();
+                }
             }
             else
             {
@@ -434,6 +445,10 @@ RTU_Sta_t RTUSlave_TimerHandler(void)
         if (node->value)
         {
             *((uint16_t *)node->value) = value;
+            if (node->callback != NULL)
+            {
+                node->callback();
+            }
         }
         else
         {
@@ -498,6 +513,11 @@ RTU_Sta_t RTUSlave_TimerHandler(void)
             if (node->value)
             {
                 *((uint16_t *)node->value) = value;
+
+                if (node->callback != NULL)
+                {
+                    node->callback();
+                }
             }
             else
             {
@@ -600,6 +620,11 @@ RTU_Sta_t RTUSlave_TimerHandler(void)
             if (node->value)
             {
                 *((uint8_t *)node->value) = bit ? 1 : 0;
+
+                if (node->callback != NULL)
+                {
+                    node->callback();
+                }
             }
             else
             {
@@ -671,6 +696,11 @@ RTU_Sta_t RTUSlave_TimerHandler(void)
         if (node->value)
         {
             *((uint8_t *)node->value) = bit;
+
+            if (node->callback != NULL)
+            {
+                node->callback();
+            }
         }
         else
         {
@@ -740,6 +770,11 @@ RTU_Sta_t RTUSlave_TimerHandler(void)
             if (node->value)
             {
                 val = *((uint16_t *)node->value);
+
+                if (node->callback != NULL)
+                {
+                    node->callback();
+                }
             }
             else
             {
@@ -795,3 +830,4 @@ int __attribute__((weak)) RTU_Transmit(uint8_t *data, size_t size)
     /* default: nothing (user should provide a strong implementation in their project) */
     return 0;
 }
+

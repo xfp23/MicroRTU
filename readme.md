@@ -53,6 +53,7 @@ typedef struct
 {
     uint16_t addr;            // Modbus register/coil address (16-bit)
     RTU_Permiss_t permiss;    // RTU_PERMISS_OR (read only) or RTU_PERMISS_RW (read/write)
+    RTUSlave_Func_t callback; // Usercallback Triggered on access
     void *data;               // pointer to variable holding the value (uint8_t for coils, uint16_t for registers)
 } RTU_RegisterMap_t;
 ```
@@ -89,16 +90,16 @@ uint16_t input_temp   = 250; // e.g. 25.0 °C scaled
 
 // map array (one array for each type)
 RTU_RegisterMap_t coils_map[] = {
-    { .addr = 0x0001, .permiss = RTU_PERMISS_RW, .data = &coil_start },
-    { .addr = 0x0002, .permiss = RTU_PERMISS_RW, .data = &coil_stop  },
+    { .addr = 0x0001, .callback = NULL, .permiss = RTU_PERMISS_RW, .data = &coil_start },
+    { .addr = 0x0002, .callback = NULL, .permiss = RTU_PERMISS_RW, .data = &coil_stop  },
 };
 
 RTU_RegisterMap_t hold_map[] = {
-    { .addr = 0x4000, .permiss = RTU_PERMISS_RW, .data = &holding_param },
+    { .addr = 0x4000, .callback = NULL, .permiss = RTU_PERMISS_RW, .data = &holding_param },
 };
 
 RTU_RegisterMap_t input_map[] = {
-    { .addr = 0x3000, .permiss = RTU_PERMISS_OR, .data = &input_temp }, // No matter what permissions you set, it is read-only.
+    { .addr = 0x3000, .callback = NULL, .permiss = RTU_PERMISS_OR, .data = &input_temp }, // No matter what permissions you set, it is read-only.
 };
 ```
 
@@ -106,10 +107,10 @@ Register them after `RTUSlave_Init()`:
 
 ```c
 RTUSlave_Init();
-RTUSlave_RegisterCoils(coils_map, sizeof(coils_map)/sizeof(coils_map[0]));
-RTUSlave_RegisterHoldReg(hold_map,  sizeof(hold_map)/sizeof(hold_map[0]));
 
-RTUSlave_RegisterInputReg(input_map, sizeof(input_map)/sizeof(input_map[0]));
+RTUSlave_RegisterCoils(coils_map,RTU_MAP_SIZEOF(coils_map));
+RTUSlave_RegisterHoldReg(hold_map,  RTU_MAP_SIZEOF(hold_map));
+RTUSlave_RegisterInputReg(input_map, RTU_MAP_SIZEOF(input_map));
 ```
 
 > **Important:** The library expects your registered nodes for multi-read/write to be **in ascending address order and contiguous** when you want block read/write behavior (the implementation assumes `node->next` is the next address). If you register sparse/unsorted maps, multi-register/coil operations (`0x03`, `0x10`, `0x01`, `0x0F`) may fail.

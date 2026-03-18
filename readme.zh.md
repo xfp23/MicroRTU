@@ -93,16 +93,16 @@ uint16_t input_temp   = 250; // 例如 25.0 °C 放大后的值
 
 // 映射表数组 (每种类型一个数组)
 RTU_RegisterMap_t coils_map[] = {
-    { .addr = 0x0001, .permiss = RTU_PERMISS_RW, .data = &coil_start },
-    { .addr = 0x0002, .permiss = RTU_PERMISS_RW, .data = &coil_stop  },
+    { .addr = 0x0001,.callback = NULL, .permiss = RTU_PERMISS_RW, .data = &coil_start },
+    { .addr = 0x0002, .callback = NULL,.permiss = RTU_PERMISS_RW, .data = &coil_stop  },
 };
 
 RTU_RegisterMap_t hold_map[] = {
-    { .addr = 0x4000, .permiss = RTU_PERMISS_RW, .data = &holding_param },
+    { .addr = 0x4000, .callback = NULL, .permiss = RTU_PERMISS_RW, .data = &holding_param },
 };
 
 RTU_RegisterMap_t input_map[] = {
-    { .addr = 0x3000, .permiss = RTU_PERMISS_OR, .data = &input_temp }, // 无论设置什么权限，这里都是只读的
+    { .addr = 0x3000,.callback = NULL, .permiss = RTU_PERMISS_OR, .data = &input_temp }, // 无论设置什么权限，这里都是只读的
 };
 
 ```
@@ -111,9 +111,10 @@ RTU_RegisterMap_t input_map[] = {
 
 ```c
 RTUSlave_Init();
-RTUSlave_RegisterCoils(coils_map, sizeof(coils_map)/sizeof(coils_map[0]));
-RTUSlave_RegisterHoldReg(hold_map,  sizeof(hold_map)/sizeof(hold_map[0]));
-RTUSlave_RegisterInputReg(input_map, sizeof(input_map)/sizeof(input_map[0]));
+
+RTUSlave_RegisterCoils(coils_map,RTU_MAP_SIZEOF(coils_map));
+RTUSlave_RegisterHoldReg(hold_map,  RTU_MAP_SIZEOF(hold_map));
+RTUSlave_RegisterInputReg(input_map, RTU_MAP_SIZEOF(input_map));
 
 ```
 

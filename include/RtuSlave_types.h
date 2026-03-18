@@ -56,12 +56,16 @@ typedef enum
 
 } RTU_FunctionCode_t;
 
+typedef void (*RTUSlave_Func_t)(void);
+
 typedef struct RTU_Register
 {
     uint16_t address;
     uint8_t permiss;
 
+    RTUSlave_Func_t callback;
     void *value;
+
     struct RTU_Register *next;
 } RTU_Register_t;
 
@@ -70,6 +74,7 @@ typedef struct
     uint16_t addr;
     RTU_Permiss_t permiss;
 
+    RTUSlave_Func_t callback;
     void *data;
 } RTU_RegisterMap_t;
 
@@ -97,4 +102,4 @@ typedef struct
 }
 #endif
 
-#endif
+#endif 
