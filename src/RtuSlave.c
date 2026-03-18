@@ -325,6 +325,11 @@ RTU_Sta_t RTUSlave_TimerHandler(void)
             {
                 bit = ((*((uint8_t *)node->value)) != 0) ? 1u : 0u;
             }
+            else
+            {
+                rtu_send_exception(func, RTU_EX_SLAVE_FAILURE);
+                return RTU_ERR;
+            }
 
             size_t byte_index = 3 + (i >> 3);
             size_t bit_index = i & 0x07;
@@ -385,6 +390,11 @@ RTU_Sta_t RTUSlave_TimerHandler(void)
             {
                 val = *((uint16_t *)node->value);
             }
+            else
+            {
+                rtu_send_exception(func, RTU_EX_SLAVE_FAILURE);
+                return RTU_ERR;
+            }
 
             size_t off = 3 + i * 2;
             this->buf[off + 0] = (uint8_t)((val >> 8) & 0xFF);
@@ -424,6 +434,11 @@ RTU_Sta_t RTUSlave_TimerHandler(void)
         if (node->value)
         {
             *((uint16_t *)node->value) = value;
+        }
+        else
+        {
+            rtu_send_exception(func, RTU_EX_SLAVE_FAILURE);
+            return RTU_ERR;
         }
 
         /* echo back request as response (per Modbus) */
@@ -483,6 +498,11 @@ RTU_Sta_t RTUSlave_TimerHandler(void)
             if (node->value)
             {
                 *((uint16_t *)node->value) = value;
+            }
+            else
+            {
+                rtu_send_exception(func, RTU_EX_SLAVE_FAILURE);
+                return RTU_ERR;
             }
 
             node = node->next;
@@ -581,6 +601,11 @@ RTU_Sta_t RTUSlave_TimerHandler(void)
             {
                 *((uint8_t *)node->value) = bit ? 1 : 0;
             }
+            else
+            {
+                rtu_send_exception(func, RTU_EX_SLAVE_FAILURE);
+                return RTU_ERR;
+            }
 
             node = node->next;
         }
@@ -647,6 +672,11 @@ RTU_Sta_t RTUSlave_TimerHandler(void)
         {
             *((uint8_t *)node->value) = bit;
         }
+        else
+        {
+            rtu_send_exception(func, RTU_EX_SLAVE_FAILURE);
+            return RTU_ERR;
+        }
 
         /* 回显 */
         RTU_Transmit(frame, size);
@@ -710,6 +740,11 @@ RTU_Sta_t RTUSlave_TimerHandler(void)
             if (node->value)
             {
                 val = *((uint16_t *)node->value);
+            }
+            else
+            {
+                rtu_send_exception(func, RTU_EX_SLAVE_FAILURE);
+                return RTU_ERR;
             }
 
             size_t off = 3 + i * 2;
