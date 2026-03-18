@@ -19,6 +19,11 @@ static uint8_t coil1 = 0;
 static uint8_t coil2 = 1;
 static void *Userdata = NULL;
 
+// read or write hold register 
+static void HoldReg0x001Trigger()
+{
+    printf("Register ");
+}
 /* ============================================================
  * Register maps
  * ============================================================
@@ -26,20 +31,20 @@ static void *Userdata = NULL;
 
 static RTU_RegisterMap_t holdRegMap[] =
 {
-    { .addr = 0x0000, .permiss = RTU_PERMISS_RW, .data = &holdReg1 },
-    { .addr = 0x0001, .permiss = RTU_PERMISS_RW, .data = &holdReg2 },
+    { .addr = 0x0000, .callback = NULL,.permiss = RTU_PERMISS_RW, .data = &holdReg1 },
+    { .addr = 0x0001, .callback = NULL, .permiss = RTU_PERMISS_RW, .data = &holdReg2 },
 };
 
 static RTU_RegisterMap_t inputRegMap[] =
 {
-    { .addr = 0x0000, .permiss = RTU_PERMISS_OR, .data = &inputReg1 },
-    { .addr = 0x0001, .permiss = RTU_PERMISS_OR, .data = &inputReg2 },
+    { .addr = 0x0000,.callback = NULL, .permiss = RTU_PERMISS_OR, .data = &inputReg1 },
+    { .addr = 0x0001, .callback = NULL, .permiss = RTU_PERMISS_OR, .data = &inputReg2 },
 };
 
 static RTU_RegisterMap_t coilMap[] =
 {
-    { .addr = 0x0000, .permiss = RTU_PERMISS_RW, .data = &coil1 },
-    { .addr = 0x0001, .permiss = RTU_PERMISS_RW, .data = &coil2 },
+    { .addr = 0x0000, .callback = NULL, .permiss = RTU_PERMISS_RW, .data = &coil1 },
+    { .addr = 0x0001, .callback = NULL, .permiss = RTU_PERMISS_RW, .data = &coil2 },
 };
 
 
