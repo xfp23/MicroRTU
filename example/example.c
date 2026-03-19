@@ -22,7 +22,7 @@ static void *Userdata = NULL;
 // read or write hold register 
 static void HoldReg0x001Trigger()
 {
-    printf("Register ");
+    printf("Holding register is accessed\n");
 }
 /* ============================================================
  * Register maps
