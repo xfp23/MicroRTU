@@ -14,6 +14,17 @@
 #include "stdlib.h"
 // #include "MicroKVTable.h"
 
+#define CHECK_CALLBACK_EX(x)               \
+    do                                     \
+    {                                      \
+        RTU_ExceptionCode_t ret = x;       \
+        if (ret != RTU_EX_NONE)            \
+        {                                  \
+            rtu_send_exception(func, ret); \
+            return RTU_ExCEPT_ACTIVE;      \
+        }                                  \
+    } while (0)
+
 /* Internal singleton */
 static RTU_SlaveObj_t rtu_obj = {0};
 static RTU_SlaveObj_t *const this = &rtu_obj;
@@ -281,6 +292,7 @@ RTU_Sta_t RTUSlave_TimerHandler(void)
 
     size_t resp_len = 0;
 
+    RTU_Ctx_t rtu_ctx = {0};
     switch (func)
     {
     case RTU_FUNC_READ_COILS: // red coils
@@ -328,7 +340,10 @@ RTU_Sta_t RTUSlave_TimerHandler(void)
 
                 if (node->callback != NULL)
                 {
-                    node->callback();
+                    rtu_ctx.addr = node->address;
+                    rtu_ctx.op = RTU_RW_READ;
+                    rtu_ctx.value = bit;
+                    CHECK_CALLBACK_EX(node->callback(&rtu_ctx));
                 }
             }
             else
@@ -398,7 +413,10 @@ RTU_Sta_t RTUSlave_TimerHandler(void)
 
                 if (node->callback != NULL)
                 {
-                    node->callback();
+                    rtu_ctx.addr = node->address;
+                    rtu_ctx.op = RTU_RW_READ;
+                    rtu_ctx.value = val;
+                    CHECK_CALLBACK_EX(node->callback(&rtu_ctx));
                 }
             }
             else
@@ -447,7 +465,10 @@ RTU_Sta_t RTUSlave_TimerHandler(void)
             *((uint16_t *)node->value) = value;
             if (node->callback != NULL)
             {
-                node->callback();
+                    rtu_ctx.addr = node->address;
+                    rtu_ctx.op = RTU_RW_WRITE;
+                    rtu_ctx.value = value;
+                CHECK_CALLBACK_EX(node->callback(&rtu_ctx));
             }
         }
         else
@@ -516,7 +537,10 @@ RTU_Sta_t RTUSlave_TimerHandler(void)
 
                 if (node->callback != NULL)
                 {
-                    node->callback();
+                    rtu_ctx.addr = node->address;
+                    rtu_ctx.op = RTU_RW_WRITE;
+                    rtu_ctx.value = value;
+                    CHECK_CALLBACK_EX(node->callback(&rtu_ctx));
                 }
             }
             else
@@ -623,7 +647,10 @@ RTU_Sta_t RTUSlave_TimerHandler(void)
 
                 if (node->callback != NULL)
                 {
-                    node->callback();
+                    rtu_ctx.addr = node->address;
+                    rtu_ctx.op = RTU_RW_WRITE;
+                    rtu_ctx.value = bit;
+                    CHECK_CALLBACK_EX(node->callback(&rtu_ctx));
                 }
             }
             else
@@ -699,7 +726,10 @@ RTU_Sta_t RTUSlave_TimerHandler(void)
 
             if (node->callback != NULL)
             {
-                node->callback();
+                    rtu_ctx.addr = node->address;
+                    rtu_ctx.op = RTU_RW_WRITE;
+                    rtu_ctx.value = bit;
+                CHECK_CALLBACK_EX(node->callback(&rtu_ctx));
             }
         }
         else
@@ -773,7 +803,10 @@ RTU_Sta_t RTUSlave_TimerHandler(void)
 
                 if (node->callback != NULL)
                 {
-                    node->callback();
+                    rtu_ctx.addr = node->address;
+                    rtu_ctx.op = RTU_RW_READ;
+                    rtu_ctx.value = val;
+                    CHECK_CALLBACK_EX(node->callback(&rtu_ctx));
                 }
             }
             else

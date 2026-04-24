@@ -6,7 +6,7 @@ extern "C" {
 #endif
 
 
-#define RTU_VERSION "2.1.3"
+#define RTU_VERSION "2.2.0"
 
 
 /* ============================================================

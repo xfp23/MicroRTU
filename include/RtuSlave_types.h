@@ -21,13 +21,20 @@ typedef enum
     RTU_WRITE_COIL,     // 写线圈
     RTU_READ_INPUT_REG,
     RTU_NOACTIVE,
+    RTU_ExCEPT_ACTIVE, // 有异常激活
 } RTU_Sta_t;
 
 typedef enum
 {
     RTU_PERMISS_OR, // only read
     RTU_PERMISS_RW, // read and write
-} __attribute__((packed)) RTU_Permiss_t;
+} /*__attribute__((packed))*/ RTU_Permiss_t;
+
+typedef enum
+{
+    RTU_RW_READ,
+    RTU_RW_WRITE,
+} RTU_RW_t;
 
 typedef enum
 {
@@ -42,21 +49,27 @@ typedef enum
 typedef enum
 {
     /** Def Coils */
-    RTU_FUNC_READ_COILS = 0x01,           // 读线圈
-    RTU_FUNC_MULTIPLE_WRITE_COILS = 0x0F, // 写多个线圈
-    RTU_FUNC_WRITE_SINGLE_COILS = 0x05,   // 写单个线圈
+    RTU_FUNC_READ_COILS = 0x01,           // read coils
+    RTU_FUNC_MULTIPLE_WRITE_COILS = 0x0F, // read mulitiple coils
+    RTU_FUNC_WRITE_SINGLE_COILS = 0x05,   // write single coils
 
     /** Def Hold Register */
-    RTU_FUNC_READ_HOLD_REGS = 0x03,     // 读保持寄存器
-    RTU_FUNC_WRITE_SINGLE_REG = 0x06,   // 写单个保持寄存器
-    RTU_FUNC_MULTIPLE_WRITE_REG = 0x10, // 写多个保持寄存器
+    RTU_FUNC_READ_HOLD_REGS = 0x03,     // read hold regs
+    RTU_FUNC_WRITE_SINGLE_REG = 0x06,   // write single regs
+    RTU_FUNC_MULTIPLE_WRITE_REG = 0x10, // write mulitple regs
 
     /** Def Input Register */
-    RTU_FUNC_READ_INPUT_REG = 0x04,
+    RTU_FUNC_READ_INPUT_REG = 0x04,     // read input regs
 
 } RTU_FunctionCode_t;
 
-typedef void (*RTUSlave_Func_t)(void);
+typedef struct {
+    uint16_t addr; // Trigger addr
+    RTU_RW_t op;
+    uint16_t value; // bus op value
+}RTU_Ctx_t;
+
+typedef RTU_ExceptionCode_t (*RTUSlave_Func_t)(RTU_Ctx_t *ctx);
 
 typedef struct RTU_Register
 {

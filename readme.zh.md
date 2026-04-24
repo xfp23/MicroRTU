@@ -92,17 +92,14 @@ uint16_t holding_param = 1234;
 uint16_t input_temp   = 250; // 例如 25.0 °C 放大后的值
 
 // 映射表数组 (每种类型一个数组)
-RTU_RegisterMap_t coils_map[] = {
-    { .addr = 0x0001,.callback = NULL, .permiss = RTU_PERMISS_RW, .data = &coil_start },
-    { .addr = 0x0002, .callback = NULL,.permiss = RTU_PERMISS_RW, .data = &coil_stop  },
+RTU_RegisterMap_t coils[] = {
+    { .addr = 0x0001, .permiss = RTU_PERMISS_RW, .data = &coil_a,.callback = NULL }
 };
-
-RTU_RegisterMap_t hold_map[] = {
-    { .addr = 0x4000, .callback = NULL, .permiss = RTU_PERMISS_RW, .data = &holding_param },
+RTU_RegisterMap_t holds[] = {
+    { .addr = 0x4000, .permiss = RTU_PERMISS_RW, .data = &hold_p,.callback = NULL }
 };
-
-RTU_RegisterMap_t input_map[] = {
-    { .addr = 0x3000,.callback = NULL, .permiss = RTU_PERMISS_OR, .data = &input_temp }, // 无论设置什么权限，这里都是只读的
+RTU_RegisterMap_t inputs[] = {
+    { .addr = 0x3000, .permiss = RTU_PERMISS_OR, .data = &input_temp ,.callback = NULL}
 };
 
 ```

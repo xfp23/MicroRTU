@@ -37,7 +37,7 @@ RTU_Sta_t RTUSlave_TimerHandler(void);
 RTU_Sta_t RTUSlave_Modifyid(uint8_t id);
 
 // override this in your project to actually send bytes:
-int __attribute__((weak)) RTU_Transmit(uint8_t *data, size_t size);
+int  RTU_Transmit(uint8_t *data, size_t size);
 ```
 
 Return values are `RTU_Sta_t` (e.g. `RTU_OK`, `RTU_ERR`, `RTU_PERMISS_ERR`, `RTU_READ_HOLD_REG`, ...). These are for your code to inspect; the library will call `RTU_Transmit()` to send protocol responses.
@@ -268,13 +268,13 @@ uint16_t input_temp = 300;
 
 // --- register maps ---
 RTU_RegisterMap_t coils[] = {
-    { .addr = 0x0001, .permiss = RTU_PERMISS_RW, .data = &coil_a }
+    { .addr = 0x0001, .permiss = RTU_PERMISS_RW, .data = &coil_a,.callback = NULL }
 };
 RTU_RegisterMap_t holds[] = {
-    { .addr = 0x4000, .permiss = RTU_PERMISS_RW, .data = &hold_p }
+    { .addr = 0x4000, .permiss = RTU_PERMISS_RW, .data = &hold_p,.callback = NULL }
 };
 RTU_RegisterMap_t inputs[] = {
-    { .addr = 0x3000, .permiss = RTU_PERMISS_OR, .data = &input_temp }
+    { .addr = 0x3000, .permiss = RTU_PERMISS_OR, .data = &input_temp ,.callback = NULL}
 };
 
 // --- user overrides transmit ---

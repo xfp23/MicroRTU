@@ -19,6 +19,21 @@ static uint8_t coil1 = 0;
 static uint8_t coil2 = 1;
 static void *Userdata = NULL;
 
+RTU_ExceptionCode_t HoldReg_Callback(RTU_Ctx_t* param)
+{
+    if(param->op == RTU_RW_READ)
+    {
+        // deal with read options
+    } else if ( param->op == RTU_RW_WRITE)
+    {
+        // deal with write options
+
+    }  else {
+        // err
+    }
+
+    return RTU_EX_NONE; // return exceppt code must default return RTU_EX_NONE
+}
 // read or write hold register 
 static void HoldReg0x001Trigger()
 {
@@ -31,7 +46,7 @@ static void HoldReg0x001Trigger()
 
 static RTU_RegisterMap_t holdRegMap[] =
 {
-    { .addr = 0x0000, .callback = NULL,.permiss = RTU_PERMISS_RW, .data = &holdReg1 },
+    { .addr = 0x0000, .callback = HoldReg_Callback,.permiss = RTU_PERMISS_RW, .data = &holdReg1 },
     { .addr = 0x0001, .callback = NULL, .permiss = RTU_PERMISS_RW, .data = &holdReg2 },
 };
 
