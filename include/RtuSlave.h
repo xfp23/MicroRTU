@@ -177,7 +177,7 @@ extern RTU_Sta_t RTUSlave_Modifyid(uint8_t id);
  *
  * @return Implementation-defined (typically 0 for success)
  */
-extern int __attribute__((weak)) RTU_Transmit(uint8_t *data, size_t size);
+extern int RTU_Transmit(uint8_t *data, size_t size);
 
 #ifdef __cplusplus
 }
