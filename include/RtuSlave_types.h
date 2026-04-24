@@ -4,6 +4,7 @@
 #include "Rtu_conf.h"
 #include "stdint.h"
 #include "stdbool.h"
+#include "stdlib.h"
 
 #ifdef __cplusplus
 extern "C"
