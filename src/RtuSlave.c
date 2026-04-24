@@ -462,14 +462,15 @@ RTU_Sta_t RTUSlave_TimerHandler(void)
         uint16_t value = ((uint16_t)frame[4] << 8) | frame[5];
         if (node->value)
         {
-            *((uint16_t *)node->value) = value;
             if (node->callback != NULL)
             {
-                    rtu_ctx.addr = node->address;
-                    rtu_ctx.op = RTU_RW_WRITE;
-                    rtu_ctx.value = value;
+                rtu_ctx.addr = node->address;
+                rtu_ctx.op = RTU_RW_WRITE;
+                rtu_ctx.value = value;
                 CHECK_CALLBACK_EX(node->callback(&rtu_ctx));
             }
+
+            *((uint16_t *)node->value) = value;
         }
         else
         {
@@ -533,8 +534,6 @@ RTU_Sta_t RTUSlave_TimerHandler(void)
 
             if (node->value)
             {
-                *((uint16_t *)node->value) = value;
-
                 if (node->callback != NULL)
                 {
                     rtu_ctx.addr = node->address;
@@ -542,6 +541,8 @@ RTU_Sta_t RTUSlave_TimerHandler(void)
                     rtu_ctx.value = value;
                     CHECK_CALLBACK_EX(node->callback(&rtu_ctx));
                 }
+
+                *((uint16_t *)node->value) = value;
             }
             else
             {
@@ -643,7 +644,6 @@ RTU_Sta_t RTUSlave_TimerHandler(void)
 
             if (node->value)
             {
-                *((uint8_t *)node->value) = bit ? 1 : 0;
 
                 if (node->callback != NULL)
                 {
@@ -652,6 +652,8 @@ RTU_Sta_t RTUSlave_TimerHandler(void)
                     rtu_ctx.value = bit;
                     CHECK_CALLBACK_EX(node->callback(&rtu_ctx));
                 }
+
+                *((uint8_t *)node->value) = bit ? 1 : 0;
             }
             else
             {
@@ -722,15 +724,16 @@ RTU_Sta_t RTUSlave_TimerHandler(void)
 
         if (node->value)
         {
-            *((uint8_t *)node->value) = bit;
 
             if (node->callback != NULL)
             {
-                    rtu_ctx.addr = node->address;
-                    rtu_ctx.op = RTU_RW_WRITE;
-                    rtu_ctx.value = bit;
+                rtu_ctx.addr = node->address;
+                rtu_ctx.op = RTU_RW_WRITE;
+                rtu_ctx.value = bit;
                 CHECK_CALLBACK_EX(node->callback(&rtu_ctx));
             }
+
+            *((uint8_t *)node->value) = bit;
         }
         else
         {
@@ -863,4 +866,3 @@ int __attribute__((weak)) RTU_Transmit(uint8_t *data, size_t size)
     /* default: nothing (user should provide a strong implementation in their project) */
     return 0;
 }
-
